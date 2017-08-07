@@ -1,6 +1,6 @@
 # PropertyToDictionary
 
-有时候需要打印一个对象的许多属性值，但是这个对象有没有实现 `description` 方法，我一般会将属性封装到一个字典中，然后将这个字典打印出来。例如有下面一个对象：
+有时候需要打印一个对象的许多属性值，但是这个对象有没有实现 `description` 方法，我一般会将属性封装到一个字典中，然后将这个字典打印出来。例如有下面一个类：
 
 ```objective-c
 @interface Person: NSObject
