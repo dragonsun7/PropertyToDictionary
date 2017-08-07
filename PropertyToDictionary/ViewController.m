@@ -10,7 +10,8 @@
 
 @interface ViewController ()
 
-@property (weak) IBOutlet NSTextFieldCell *textFieldCell;
+@property (weak) IBOutlet NSTextFieldCell *dictionaryNameTextField;
+@property (weak) IBOutlet NSTextFieldCell *objectNameTextField;
 @property (unsafe_unretained) IBOutlet NSTextView *textView;
 
 @end
@@ -18,7 +19,9 @@
 @implementation ViewController
 
 - (IBAction)convertAction:(id)sender {
-    self.textView.string = [self dictionaryStringFromDictionaryName:self.textFieldCell.title FromPropertyText:self.textView.string];
+    self.textView.string = [self dictionaryStringFromDictionaryName:self.dictionaryNameTextField.title
+                                                         ObjectName:self.objectNameTextField.title
+                                                       PropertyText:self.textView.string];
 }
 
 
@@ -48,16 +51,17 @@
         @property(nonatomic) _Bool m_bIsBrandSendMass;
     输出：
         NSDictionary *dict = @{
-                               @"m_dicForwardParas"  : m_dicForwardParas    ,
-                               @"m_forwardType"      : @(m_forwardType)     ,
-                               @"m_bIsBrandSendMass" : @(m_bIsBrandSendMass)
+                               @"m_dicForwardParas"  : object.m_dicForwardParas    ,
+                               @"m_forwardType"      : @(object.m_forwardType)     ,
+                               @"m_bIsBrandSendMass" : @(object.m_bIsBrandSendMass)
                                }
 
  @param dictionaryName 字典名称
+ @param objectName 对象名称
  @param propertyText 属性声明字符串
  @return 内容字典代码字符串
  */
-- (NSString *)dictionaryStringFromDictionaryName:(NSString *)dictionaryName FromPropertyText:(NSString *)propertyText {
+- (NSString *)dictionaryStringFromDictionaryName:(NSString *)dictionaryName ObjectName:(NSString *)objectName PropertyText:(NSString *)propertyText {
     // 将输入的文本按照分行符拆分到数组
     NSArray *lineArr = [propertyText componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]];
     
@@ -69,7 +73,7 @@
     NSMutableArray *propertyArr = [NSMutableArray array];
     NSMutableArray *isObjectArr = [NSMutableArray array];
     NSUInteger propertyMaxLength = 0;
-    BOOL haveNoObject = YES;
+    BOOL haveNoObject = NO;
     NSString *s;
     NSRange range;
     BOOL isObject;
@@ -117,13 +121,14 @@
         [propertyArr addObject:s];
         [isObjectArr addObject:@(isObject)];
         
-        // 记录是否都不是对象
-        haveNoObject = haveNoObject && (!isObject);
+        // 记录是否有非对象的属性
+        haveNoObject = haveNoObject || (!isObject);
     }
     
     // 组合成字典
     NSMutableArray *retArr = [NSMutableArray array];
-    NSUInteger suffixMaxLength = haveNoObject ? propertyMaxLength + 3 : propertyMaxLength; // 不是对象需要加上@()
+    NSUInteger suffixMaxLength = propertyMaxLength + objectName.length + 1;
+    if (haveNoObject) suffixMaxLength += 3;     // 不是对象需要加上@()，所以有非对象的属性，则长度需要加3
     
     // 第一项
     NSString *dictName = [dictionaryName stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
@@ -163,16 +168,20 @@
             [formatString appendString:@"@(%@)"];
         }
         
+        // 生成字典项value字符串
+        objectName = [objectName stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+        NSString *valueString = [NSString stringWithFormat:@"%@.%@", objectName, s];
+        
         // 如果不是最后一行，则尾部空格对齐后添加','
         if (i < propertyArr.count - 1) {
-            NSUInteger time = suffixMaxLength - s.length;
-            if (!isObject) time -= 3;   // 不是对象因为要添加'@()'，多了3个字符，所以后面的空格要少加3个
+            NSUInteger time = suffixMaxLength - valueString.length;
+            if (!isObject && haveNoObject) time -= 3;   // 不是对象因为要添加'@()'，多了3个字符，所以后面的空格要少加3个
             [self string:formatString appendString:@" " time:time];
             [formatString appendString:@","];
         }
         
         // 生成行
-        s = [NSString stringWithFormat:formatString, s, s];
+        s = [NSString stringWithFormat:formatString, s, valueString];
         
         // 插入到数组中
         [retArr insertObject:s atIndex:retArr.count - 1];
